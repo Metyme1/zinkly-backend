@@ -37,9 +37,7 @@ router.post(
   AuthController.changePassword
 );
 
-router.post('/social-login',
-  AuthController.socialLogin
-);
+router.post('/social-login', AuthController.socialLogin);
 
 router.post('/refresh-token', AuthController.issueNewAccess);
 

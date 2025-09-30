@@ -9,7 +9,12 @@ const router = express.Router();
 
 router.get(
   '/profile',
-  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.USER, USER_ROLES.ARTIST),
+  auth(
+    USER_ROLES.SUPER_ADMIN,
+    USER_ROLES.ADMIN,
+    USER_ROLES.USER,
+    USER_ROLES.ARTIST
+  ),
   UserController.getUserProfile
 );
 
@@ -20,11 +25,18 @@ router
     UserController.createUser
   )
   .delete(
-    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.USER, USER_ROLES.ARTIST),
+    // auth(USER_ROLES.ADMIN,
+    //   USER_ROLES.SUPER_ADMIN,
+    //   USER_ROLES.USER, USER_ROLES.ARTIST),
     UserController.deleteUser
   )
   .patch(
-    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.USER, USER_ROLES.ARTIST),
+    auth(
+      USER_ROLES.ADMIN,
+      USER_ROLES.SUPER_ADMIN,
+      USER_ROLES.USER,
+      USER_ROLES.ARTIST
+    ),
     fileUploadHandler(),
     UserController.updateProfile
   );
