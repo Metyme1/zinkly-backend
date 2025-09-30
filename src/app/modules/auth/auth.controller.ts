@@ -1,0 +1,109 @@
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+import catchAsync from '../../../shared/catchAsync';
+import sendResponse from '../../../shared/sendResponse';
+import { AuthService } from './auth.service';
+
+// const verifyEmail = catchAsync(async (req: Request, res: Response) => {
+//   const { ...verifyData } = req.body;
+//   const result = await AuthService.verifyEmailToDB(verifyData);
+
+//   sendResponse(res, {
+//     success: true,
+//     statusCode: StatusCodes.OK,
+//     message: result.message,
+//     data: result.data,
+//   });
+// });
+const verifyEmail = catchAsync(async (req: Request, res: Response) => {
+  const result = await AuthService.verifyEmailToDB(req.body);
+
+  sendResponse(res, {
+    success: result.success,
+    statusCode: result.success ? StatusCodes.OK : StatusCodes.BAD_REQUEST,
+    message: result.message,
+    data: result.data || null,
+  });
+});
+
+const loginUser = catchAsync(async (req: Request, res: Response) => {
+  const { ...loginData } = req.body;
+  const result = await AuthService.loginUserFromDB(loginData);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'User login successfully',
+    data: result,
+  });
+});
+
+const forgetPassword = catchAsync(async (req: Request, res: Response) => {
+  const email = req.body.email;
+  const result = await AuthService.forgetPasswordToDB(email);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Please check your email, we send a OTP!',
+    data: result,
+  });
+});
+
+const resetPassword = catchAsync(async (req: Request, res: Response) => {
+  const token = req.headers.authorization;
+  const { ...resetData } = req.body;
+  const result = await AuthService.resetPasswordToDB(token!, resetData);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Password reset successfully',
+    data: result,
+  });
+});
+
+const changePassword = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user;
+  const { ...passwordData } = req.body;
+  await AuthService.changePasswordToDB(user, passwordData);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Password changed successfully',
+  });
+});
+
+const issueNewAccess = catchAsync(async (req: Request, res: Response) => {
+  const { token } = req.body;
+  const result = await AuthService.issueNewAccessToken(token);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Access token Retrieved successfully',
+    data: result,
+  });
+});
+
+const socialLogin = catchAsync(async (req: Request, res: Response) => {
+  const result = await AuthService.socialLoginFromDB(req.body);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Logged in Successfully',
+    data: result,
+  });
+});
+
+export const AuthController = {
+  verifyEmail,
+  loginUser,
+  forgetPassword,
+  resetPassword,
+  changePassword,
+  issueNewAccess,
+  socialLogin,
+};
