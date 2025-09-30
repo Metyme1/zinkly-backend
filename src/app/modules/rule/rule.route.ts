@@ -24,7 +24,7 @@ router
 router
   .route('/disclaimer')
   .post(
-    auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN),
+    // auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN),
     RuleController.createDisclaimer
   )
   .patch(
