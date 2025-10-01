@@ -1,15 +1,20 @@
-import { Model, Types } from "mongoose";
+import { Document, Model } from 'mongoose';
 
-export type IBooking = {
-    user: Types.ObjectId,
-    artist: Types.ObjectId,
-    price: Number,
-    fine?: Number,
-    bookingId:String,
-    status:  'Pending' | 'Complete' | "Accept" | "Reject" |"Refund",
-    booking_date: String,
-    transactionId: String,
-    booking_time: String
+export interface IBooking {
+  user: string;
+  artist: string;
+  price: number;
+  fine?: number;
+  bookingId: string;
+  status?: 'Pending' | 'Complete' | 'Accept' | 'Reject' | 'Refund';
+  booking_date: string;
+  transactionId: string;
+  booking_time: string;
+
+  // 👇 Add Zoom + multi-user fields here
+  zoomJoinUrl?: string;
+  zoomStartUrl?: string;
+  allowMultiple?: boolean;
 }
 
 export type BookingModel = Model<IBooking>;

@@ -1,49 +1,30 @@
-import { model, Schema } from "mongoose";
-import { IBooking, BookingModel } from "./booking.interface"
+import { model, Schema } from 'mongoose';
+import { IBooking, BookingModel } from './booking.interface';
 
 const bookingSchema = new Schema(
-    {
-        user: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-        },
-        artist: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-        },
-        price: {
-            type: Number,
-            required: true,
-        },
-        fine: {
-            type: Number,
-            default: 0
-        },
-        bookingId: {
-            type: String,
-            required: true
-        },
-        status: {
-            type: String,
-            enum: ["Pending", "Complete", "Accept", "Reject", "Refund"],
-            default: "Pending"
-        },
-        booking_date: {
-            type: String,
-            required: true
-        },
-        transactionId: {
-            type: String,
-            require: true
-        },
-        booking_time: {
-            type: String,
-            required: true
-        }
+  {
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    artist: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    price: { type: Number, required: true },
+    fine: { type: Number, default: 0 },
+    bookingId: { type: String, required: true },
+    status: {
+      type: String,
+      enum: ['Pending', 'Complete', 'Accept', 'Reject', 'Refund'],
+      default: 'Pending',
     },
-    {timestamps: true}
+    booking_date: { type: String, required: true },
+    transactionId: { type: String, required: true },
+    booking_time: { type: String, required: true },
+
+    // ✅ NEW: Zoom fields
+    zoomJoinUrl: { type: String },
+    zoomStartUrl: { type: String },
+
+    // ✅ NEW: Multi-user option
+    allowMultiple: { type: Boolean, default: false },
+  },
+  { timestamps: true }
 );
 
-export const Booking = model<IBooking, BookingModel>("Booking", bookingSchema);
+export const Booking = model<IBooking, BookingModel>('Booking', bookingSchema);
