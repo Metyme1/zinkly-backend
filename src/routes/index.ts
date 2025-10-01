@@ -11,21 +11,23 @@ import { BookingRoutes } from '../app/modules/booking/booking.routes';
 import { NotificationRoutes } from '../app/modules/notification/notification.routes';
 import { PaymentRoutes } from '../app/modules/payment/payment.routes';
 import { AdminRoutes } from '../app/modules/admin/admin.routes';
+import { AvailabilityRoutes } from '../app/modules/avaliablity/avaliablity.route';
 const router = express.Router();
 
 const apiRoutes = [
-  {path: '/user', route: UserRoutes},
-  {path: '/auth',route: AuthRoutes},
-  {path: '/rule',route: RuleRoutes},
-  {path: '/category',route: CategoryRoutes},
-  {path: '/lesson', route: LessonRoutes},
-  {path: '/review', route: ReviewRoutes},
-  {path: '/bookmark',route: BookmarkRoutes},
-  {path: '/artist',route: ArtistRoutes},
-  {path: '/booking',route: BookingRoutes},
-  {path: '/notification',route: NotificationRoutes},
-  {path: '/payment',route: PaymentRoutes},
-  {path: '/admin',route: AdminRoutes},
+  { path: '/user', route: UserRoutes },
+  { path: '/auth', route: AuthRoutes },
+  { path: '/rule', route: RuleRoutes },
+  { path: '/category', route: CategoryRoutes },
+  { path: '/lesson', route: LessonRoutes },
+  { path: '/review', route: ReviewRoutes },
+  { path: '/bookmark', route: BookmarkRoutes },
+  { path: '/artist', route: ArtistRoutes },
+  { path: '/booking', route: BookingRoutes },
+  { path: '/notification', route: NotificationRoutes },
+  { path: '/payment', route: PaymentRoutes },
+  { path: '/admin', route: AdminRoutes },
+  { path: '/ava', route: AvailabilityRoutes },
 ];
 
 apiRoutes.forEach(route => router.use(route.path, route.route));

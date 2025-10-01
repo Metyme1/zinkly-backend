@@ -8,8 +8,8 @@ import { IUser, UserModal } from './user.interface';
 
 const userSchema = new Schema<IUser, UserModal>(
   {
-    name: {type: String, required: false},
-    appId: {type: String, required: false},
+    name: { type: String, required: false },
+    appId: { type: String, required: false },
     role: {
       type: String,
       enum: Object.values(USER_ROLES),
@@ -22,7 +22,7 @@ const userSchema = new Schema<IUser, UserModal>(
     },
     contact: {
       type: String,
-      default: ""
+      default: '',
     },
     password: {
       type: String,
@@ -31,15 +31,16 @@ const userSchema = new Schema<IUser, UserModal>(
     },
     location: {
       type: String,
-      default: ""
+      default: '',
     },
     gender: {
       type: String,
-      default: ""
+      default: '',
     },
     profile: {
       type: String,
-      default: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGh5WFH8TOIfRKxUrIgJZoDCs1yvQ4hIcppw&s',
+      default:
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGh5WFH8TOIfRKxUrIgJZoDCs1yvQ4hIcppw&s',
     },
     status: {
       type: String,
@@ -52,8 +53,8 @@ const userSchema = new Schema<IUser, UserModal>(
     },
     lesson: {
       type: Schema.Types.ObjectId,
-      ref: "Lesson",
-      required: false
+      ref: 'Lesson',
+      required: false,
     },
     authentication: {
       type: {
@@ -88,8 +89,8 @@ const userSchema = new Schema<IUser, UserModal>(
       },
       currency: {
         type: String,
-      }
-  },
+      },
+    },
   },
   { timestamps: true }
 );
@@ -102,7 +103,7 @@ userSchema.statics.isExistUserById = async (id: string) => {
 
 //account check
 userSchema.statics.isAccountCreated = async (id: string) => {
-  const isUserExist:any = await User.findById(id);
+  const isUserExist: any = await User.findById(id);
   return isUserExist.accountInformation.status;
 };
 
@@ -123,7 +124,7 @@ userSchema.statics.isMatchPassword = async (
 userSchema.pre('save', async function (next) {
   //check user
 
-  if(this.email){
+  if (this.email) {
     const isExist = await User.findOne({ email: this.email });
     if (isExist) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Email already exist!');
@@ -131,7 +132,7 @@ userSchema.pre('save', async function (next) {
   }
 
   //password hash
-  if(this.password){
+  if (this.password) {
     this.password = await bcrypt.hash(
       this.password,
       Number(config.bcrypt_salt_rounds)
