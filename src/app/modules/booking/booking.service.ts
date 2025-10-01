@@ -115,6 +115,7 @@ const createBooking = async (payload: IBooking): Promise<IBooking> => {
 
   return booking;
 };
+
 const myBookingFromDB = async (
   payload: JwtPayload,
   queries: string
@@ -134,7 +135,9 @@ const myBookingFromDB = async (
       path: 'artist',
       select: 'name profile',
     })
-    .select('artist booking_time status booking_date bookingId');
+    .select(
+      'artist booking_time status booking_date bookingId zoomJoinUrl zoomStartUrl allowMultiple'
+    );
   return result;
 };
 
@@ -449,45 +452,52 @@ const bookingSummaryFromDB = async (id: string): Promise<IBooking | {}> => {
 
   return { totalClient, balance, bookingList, yearlyIncome };
 };
-
 const lessonBookingFromDB = async (
   id: JwtPayload,
-  status: string,
-  date: string
+  status?: string,
+  date?: string
 ): Promise<IBooking | {}> => {
-  // Convert date to yyyy-mm-dd format
+  // today in yyyy-mm-dd
   const today = new Date().toISOString().split('T')[0];
 
+  // Base query
   let query: any = {
     artist: id,
     booking_date: { $gte: today },
   };
 
+  // If specific date is requested
   if (date) {
     query.booking_date = date;
-  } else {
-    query.status = 'Pending';
   }
 
+  // ✅ Handle status properly
   if (status) {
-    if (status === 'Accept') {
-      query.status = 'Accept';
-    } else if (status === 'Reject') {
-      query.status = 'Reject';
+    if (status.toLowerCase() === 'accepted') {
+      query.status = 'Accepted';
+    } else if (status.toLowerCase() === 'rejected') {
+      query.status = 'Rejected';
+    } else if (status.toLowerCase() === 'pending') {
+      query.status = 'Pending';
     }
   }
 
+  // Fetch bookings by filter
   const booking = await Booking.find(query)
     .populate({
       path: 'user',
       select: 'name profile',
     })
-    .select('user bookingId status booking_date');
+    .select(
+      'user bookingId status booking_date booking_time zoomJoinUrl zoomStartUrl allowMultiple'
+    );
 
+  // Fetch unique booking dates (still filter by artist & >= today only)
   const bookingList = await Booking.find({
     artist: id,
     booking_date: { $gte: today },
   });
+
   const bookingDates = [...new Set(bookingList.map(item => item.booking_date))];
 
   return { bookingDates, booking };

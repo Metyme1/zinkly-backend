@@ -44,6 +44,7 @@ const createBooking = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
 const toggleMultiUser = catchAsync(async (req: Request, res: Response) => {
   const { bookingId, allowMultiple } = req.body;
 
@@ -77,12 +78,26 @@ const toggleMultiUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 const myBookingFromDB = catchAsync(async (req: Request, res: Response) => {
-  const query = req.query.status;
-  const user = req.user.id;
+  const queryStatus =
+    typeof req.query.status === 'string' ? req.query.status : '';
+  const userId = req.user.id;
 
-  const statusQuery = typeof query === 'string' ? query : '';
+  console.log(
+    `[BOOKING] Fetching bookings for user ${userId} with status=${queryStatus}`
+  );
 
-  const result = await BookingService.myBookingFromDB(user, statusQuery);
+  const result = await BookingService.myBookingFromDB(userId, queryStatus);
+
+  // Debugging: log how many bookings found and whether Zoom links exist
+  console.log(`[BOOKING] Retrieved ${result.length} bookings`);
+  result.forEach(b => {
+    console.log(
+      `   - ${b.bookingId}: join=${b.zoomJoinUrl ? '✅' : '❌'} start=${
+        b.zoomStartUrl ? '✅' : '❌'
+      }`
+    );
+  });
+
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -149,11 +164,22 @@ const transactionsHistoryFromDB = catchAsync(
     });
   }
 );
-
-// respond booking
 const respondBookingToDB = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id;
-  const status = req.query.status as unknown as string;
+
+  // Support both ?status=Accepted and body {status: "Rejected"}
+  const status =
+    (req.body.status as string) || (req.query.status as string) || '';
+
+  if (!status) {
+    return sendResponse(res, {
+      statusCode: StatusCodes.BAD_REQUEST,
+      success: false,
+      message: 'Status is required',
+      data: null,
+    });
+  }
+
   const result = await BookingService.respondBookingToDB(id, status);
   sendResponse(res, {
     statusCode: StatusCodes.OK,

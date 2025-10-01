@@ -56,5 +56,10 @@ router.patch(
 );
 router.get('/details/:id', BookingController.bookingDetailsFromDB);
 router.patch('/toggle-multi', BookingController.toggleMultiUser);
-
+// ✅ New endpoint for Flutter’s call
+router.patch(
+  '/lesson-booking/:id/status',
+  auth(USER_ROLES.ARTIST),
+  BookingController.respondBookingToDB
+);
 export const BookingRoutes = router;
