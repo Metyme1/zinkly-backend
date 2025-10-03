@@ -8,40 +8,65 @@ import { Booking } from './booking.model';
 import { ZoomService } from '../zoom/zoon.service';
 
 const createBooking = catchAsync(async (req: Request, res: Response) => {
+  const generateBookingId = () => {
+    return `#${Date.now()}`; // example: #1759464694023
+  };
+
   const user = req.user;
   const payload = { user: user?.id, ...req.body };
 
   console.log('[BOOKING] Creating booking with payload:', payload);
 
-  // 1. Create booking in DB
-  let result = await BookingService.createBooking(payload);
-  console.log('[BOOKING] Initial booking saved:', result.bookingId);
-
-  // 2. Create Zoom meeting
-  const artist = await User.findById(result.artist);
-  const zoomMeeting = await ZoomService.createMeeting(
-    artist?.name || 'Musician',
-    'Music Lesson',
-    result.booking_date,
-    result.booking_time
-  );
-
-  // 3. Update booking with Zoom links
-  result.zoomJoinUrl = zoomMeeting.joinUrl;
-  result.zoomStartUrl = zoomMeeting.startUrl;
-  await (result as any).save();
-
-  console.log('[BOOKING] Zoom links attached:', {
-    join: result.zoomJoinUrl,
-    start: result.zoomStartUrl,
+  // 1. Look for *any existing booking* for same artist/date/time with allowMultiple
+  const existing = await Booking.findOne({
+    artist: payload.artist,
+    booking_date: payload.booking_date,
+    booking_time: payload.booking_time,
+    allowMultiple: true,
   });
 
-  // 4. Response
+  let zoomJoinUrl: string;
+  let zoomStartUrl: string;
+
+  if (existing) {
+    zoomJoinUrl = existing.zoomJoinUrl || '';
+    zoomStartUrl = existing.zoomStartUrl || '';
+  } else {
+    console.log('[BOOKING] No existing booking → create Zoom meeting');
+
+    const artist = await User.findById(payload.artist);
+    const zoomMeeting = await ZoomService.createMeeting(
+      artist?.name || 'Musician',
+      'Music Lesson',
+      payload.booking_date,
+      payload.booking_time
+    );
+
+    zoomJoinUrl = zoomMeeting.joinUrl;
+    zoomStartUrl = zoomMeeting.startUrl;
+  }
+
+  // 2. Create a *new booking for this student*
+  const newBooking = await Booking.create({
+    artist: payload.artist,
+    users: [payload.user],
+    price: payload.price,
+    bookingId: generateBookingId(), // ✅ auto-generate instead of relying on frontend
+    transactionId: payload.transactionId,
+    booking_date: payload.booking_date,
+    booking_time: payload.booking_time,
+    allowMultiple: payload.allowMultiple || false,
+    zoomJoinUrl,
+    zoomStartUrl,
+  });
+
+  console.log('[BOOKING] Created new booking with Zoom reuse:', newBooking._id);
+
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: 'Booking Booked Successfully (with Zoom link)',
-    data: result,
+    message: 'Booking created successfully',
+    data: newBooking,
   });
 });
 
@@ -76,6 +101,45 @@ const toggleMultiUser = catchAsync(async (req: Request, res: Response) => {
     data: booking,
   });
 });
+const toggleMultiUserForSlot = catchAsync(
+  async (req: Request, res: Response) => {
+    const { zoomJoinUrl, allowMultiple } = req.body;
+    const artistId = req.user?.id; // 👈 this is throwing the error if req.user is undefined
+
+    if (!artistId) {
+      return sendResponse(res, {
+        statusCode: StatusCodes.UNAUTHORIZED,
+        success: false,
+        message: 'Unauthorized - artist not found in request',
+        data: null,
+      });
+    }
+
+    console.log(
+      `🔄 Toggling multi-user for all bookings with zoom=${zoomJoinUrl} (artist=${artistId}) → ${allowMultiple}`
+    );
+
+    // Update ALL bookings that share this zoom link
+    const result = await Booking.updateMany(
+      {
+        artist: artistId,
+        zoomJoinUrl, // 👈 group bookings by same Zoom session
+      },
+      { allowMultiple }
+    );
+
+    console.log(
+      `✅ Updated ${result.modifiedCount} bookings with same Zoom link`
+    );
+
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'Multi-user option updated for this Zoom session',
+      data: { updated: result.modifiedCount },
+    });
+  }
+);
 
 const myBookingFromDB = catchAsync(async (req: Request, res: Response) => {
   const queryStatus =
@@ -164,27 +228,17 @@ const transactionsHistoryFromDB = catchAsync(
     });
   }
 );
+
+// booking.controller.ts
 const respondBookingToDB = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id;
-
-  // Support both ?status=Accepted and body {status: "Rejected"}
-  const status =
-    (req.body.status as string) || (req.query.status as string) || '';
-
-  if (!status) {
-    return sendResponse(res, {
-      statusCode: StatusCodes.BAD_REQUEST,
-      success: false,
-      message: 'Status is required',
-      data: null,
-    });
-  }
-
+  const status = req.query.status as string; // "Accept" or "Reject"
   const result = await BookingService.respondBookingToDB(id, status);
+
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: `Artist ${status} the Booking Successfully`,
+    message: `Artist ${status}ed the Booking Successfully`,
     data: result,
   });
 });
@@ -255,4 +309,5 @@ export const BookingController = {
   lessonBookingSummary,
   sendLinkToUser,
   toggleMultiUser,
+  toggleMultiUserForSlot,
 };

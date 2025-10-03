@@ -13,68 +13,10 @@ import Stripe from 'stripe';
 import config from '../../../config';
 import { sendNotifications } from '../../../helpers/notificationsHelper';
 import { Availability } from '../avaliablity/avaliablity.model';
+import stripe from 'stripe';
 
 //create stripe instance
-const stripe = new Stripe(config.stripe_api_secret as string);
 
-// const createBooking= async(payload: IBooking): Promise<IBooking>=>{
-//     const isExistArtist = await User.findById(payload.user);
-//     if(!isExistArtist){
-//         throw new ApiError(StatusCodes.NOT_FOUND, "No User Found to Booked")
-//     }
-
-//     const { price } = payload;
-
-//     if(typeof price === "string"){
-//         payload.price = Number(price);
-//     }
-
-//     const createOrder={
-//         ...payload,
-//         bookingId: await generateBookingId()
-//     }
-
-//     const booking:any = await Booking.create(createOrder);
-//     if(!booking){
-//         throw new ApiError(StatusCodes.BAD_REQUEST, "Failed to Booked A Booking")
-//     }
-
-//     // this notifications for artist
-//     const data = {
-//         sender: payload.user,
-//         receiver: payload.artist,
-//         text: `Booking on your lesson`,
-//     };
-//     await sendNotifications(data)
-
-//     /* const bookingTime = new Date(payload.booking_time as string);
-//     console.log(bookingTime, payload.booking_time)
-//     const reminderTime = new Date(bookingTime.getTime() - 2 * 60 * 60 * 1000);
-
-//     // Check if reminderTime is valid
-//     if (isNaN(reminderTime.getTime())) {
-//         throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid reminder time calculated");
-//     }
-
-//     // Convert reminder time to cron format
-//     const cronTime = `${reminderTime.getMinutes()} ${reminderTime.getHours()} ${reminderTime.getDate()} ${reminderTime.getMonth() + 1} *`;
-
-//     // Log or validate cronTime before scheduling
-//     console.log("Scheduling reminder with cron time:", cronTime);
-
-//     // Schedule the reminder
-//     cron.schedule(cronTime, async () => {
-//         // Notification for the user
-//         const data = {
-//             sender: payload.artist,
-//             receiver: payload.user,
-//             text: `Your appointment is in 2 hours. Don't forget!`,
-//         };
-//         await sendNotifications(data);
-//     }); */
-
-//     return booking;
-// }
 const createBooking = async (payload: IBooking): Promise<IBooking> => {
   // Check if slot is available before booking
   const slot = await Availability.findOne({
@@ -155,7 +97,7 @@ const completeBookingToDB = async (id: string): Promise<IBooking | null> => {
 
   // this notifications for artist
   const data = {
-    sender: isExistBooking.user,
+    sender: isExistBooking.users,
     receiver: isExistBooking.artist,
     text: `Someone booking on your lesson`,
   };
@@ -182,7 +124,7 @@ const rescheduleBookingToDB = async (
 
   // this notifications for artist
   const data = {
-    sender: isExistBooking.user,
+    sender: isExistBooking.users,
     receiver: isExistBooking.artist,
     text: `Reschedule on your lesson`,
   };
@@ -265,8 +207,7 @@ const transactionsHistoryFromDB = async (
   return transactions;
 };
 
-// respond for booking status
-const respondBookingToDB = async (
+export const respondBookingToDB = async (
   id: string,
   status: string
 ): Promise<IBooking | null> => {
@@ -274,24 +215,33 @@ const respondBookingToDB = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid ID');
   }
 
-  // Update the booking status
+  // ✅ normalize status
+  let normalizedStatus: 'Accepted' | 'Rejected';
+  if (status.toLowerCase().startsWith('acc')) {
+    normalizedStatus = 'Accepted';
+  } else if (status.toLowerCase().startsWith('rej')) {
+    normalizedStatus = 'Rejected';
+  } else {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid status value');
+  }
+
+  // ✅ update booking
   const result: any = await Booking.findByIdAndUpdate(
-    { _id: id },
-    { status: status },
+    id,
+    { status: normalizedStatus },
     { new: true }
   );
 
-  // Check if the booking was found and updated
   if (!result) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to update booking.');
   }
 
-  // If the status is "rejected", initiate a refund
-  if (status === 'Reject') {
+  // ✅ refund if rejected
+  if (normalizedStatus === 'Rejected') {
     const paymentIntent: any = await stripe.paymentIntents.retrieve(
       result?.transactionId
     );
-    const chargeId = paymentIntent.charges.data[0].id;
+    const chargeId = paymentIntent?.charges?.data[0]?.id;
 
     if (!chargeId) {
       throw new ApiError(
@@ -300,11 +250,8 @@ const respondBookingToDB = async (
       );
     }
 
-    // Initiate the refund
     try {
-      const refund = await stripe.refunds.create({
-        charge: chargeId,
-      });
+      const refund = await stripe.refunds.create({ charge: chargeId });
       console.log('Refund successful:', refund);
     } catch (refundError) {
       console.error('Refund failed:', refundError);
@@ -315,11 +262,11 @@ const respondBookingToDB = async (
     }
   }
 
-  // this notifications for artist
+  // ✅ notify artist
   const data = {
     receiver: result.artist,
-    sender: result.user,
-    text: `Your session is ${status}`,
+    sender: result.users,
+    text: `Your session is ${normalizedStatus}`,
   };
   await sendNotifications(data);
 
@@ -339,7 +286,7 @@ const bookingDetailsFromDB = async (id: string): Promise<IBooking | null> => {
         },
       },
       {
-        path: 'user',
+        path: 'users',
         select: 'name contact',
       },
     ])
@@ -456,7 +403,7 @@ const lessonBookingFromDB = async (
   id: JwtPayload,
   status?: string,
   date?: string
-): Promise<IBooking | {}> => {
+): Promise<any> => {
   // today in yyyy-mm-dd
   const today = new Date().toISOString().split('T')[0];
 
@@ -482,15 +429,40 @@ const lessonBookingFromDB = async (
     }
   }
 
-  // Fetch bookings by filter
-  const booking = await Booking.find(query)
+  // Fetch bookings
+  const bookings = await Booking.find(query)
     .populate({
-      path: 'user',
+      path: 'users',
       select: 'name profile',
     })
     .select(
-      'user bookingId status booking_date booking_time zoomJoinUrl zoomStartUrl allowMultiple'
-    );
+      'bookingId status booking_date booking_time zoomJoinUrl zoomStartUrl allowMultiple users'
+    )
+    .lean();
+
+  // ✅ Group by Zoom slot (same artist, date, time → same group)
+  const grouped: Record<string, any> = {};
+
+  bookings.forEach(b => {
+    const key = b.zoomJoinUrl || `${b.booking_date}_${b.booking_time}`;
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        _id: b._id,
+        bookingId: b.bookingId,
+        status: b.status,
+        booking_date: b.booking_date,
+        booking_time: b.booking_time,
+        zoomJoinUrl: b.zoomJoinUrl,
+        zoomStartUrl: b.zoomStartUrl,
+        allowMultiple: b.allowMultiple,
+        users: [],
+      };
+    }
+
+    // Merge users into one array
+    grouped[key].users.push(...(b.users || []));
+  });
 
   // Fetch unique booking dates (still filter by artist & >= today only)
   const bookingList = await Booking.find({
@@ -500,7 +472,10 @@ const lessonBookingFromDB = async (
 
   const bookingDates = [...new Set(bookingList.map(item => item.booking_date))];
 
-  return { bookingDates, booking };
+  return {
+    bookingDates,
+    booking: Object.values(grouped), // 🚀 return grouped list
+  };
 };
 
 const sendLinkToUser = async (
@@ -511,7 +486,7 @@ const sendLinkToUser = async (
 
   const emailData = {
     to: booking?.user?.email,
-    userName: booking?.user?.name,
+    userName: booking?.users?.name,
     artistName: booking?.artist?.name,
     bookingDate: booking?.booking_date,
     bookingTime: booking?.booking_time,
@@ -520,7 +495,7 @@ const sendLinkToUser = async (
 
   // this notifications for artist
   const data = {
-    sender: booking.user,
+    sender: booking.users,
     receiver: booking.artist,
     text: `Send Lesson session link with details`,
   };

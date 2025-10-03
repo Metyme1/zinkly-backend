@@ -62,4 +62,10 @@ router.patch(
   auth(USER_ROLES.ARTIST),
   BookingController.respondBookingToDB
 );
+router.patch(
+  '/lesson-booking/toggle-slot',
+  auth(USER_ROLES.ARTIST),
+  BookingController.toggleMultiUserForSlot
+);
+
 export const BookingRoutes = router;

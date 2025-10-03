@@ -98,75 +98,7 @@ const socialLogin = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
-const artistListFromDB = async (query: {
-  [x: string]: any;
-  search: any;
-  rating: any;
-  gender: any;
-}) => {
-  const { search, rating, gender, ...filterData } = query;
-  const anyConditions = [];
 
-  // Artist search handling
-  if (search && typeof search === 'string' && search.trim().length > 0) {
-    anyConditions.push({
-      $or: ['title', 'lessonTitle', 'genre', 'instrument'].map(field => ({
-        [field]: {
-          $regex: new RegExp(search, 'i'),
-        },
-      })),
-    });
-  }
-
-  // Gender filter
-  if (gender && gender.toLowerCase() !== 'all') {
-    anyConditions.push({ gender: gender });
-  }
-
-  // Other filters
-  if (Object.keys(filterData).length) {
-    anyConditions.push({
-      $and: Object.entries(filterData).map(([field, value]) => ({
-        [field]: value,
-      })),
-    });
-  }
-
-  // Rating filter
-  if (rating) {
-    anyConditions.push({
-      rating: {
-        $gte: rating,
-        $lt: rating + 1,
-      },
-    });
-  }
-
-  const whereConditions =
-    anyConditions.length > 0 ? { $and: anyConditions } : {};
-
-  const results = await Lesson.find(whereConditions)
-    .populate({
-      path: 'user',
-      select: 'name profile',
-    })
-    .select('rating totalRating gallery title');
-
-  const availableArtist = results.map(item => {
-    const artist = item.toObject();
-    const { user, ...otherData } = artist;
-
-    const data = {
-      ...user,
-      lesson: {
-        ...otherData,
-      },
-    };
-    return data;
-  });
-
-  return availableArtist;
-};
 
 export const AuthController = {
   verifyEmail,
@@ -176,5 +108,4 @@ export const AuthController = {
   changePassword,
   issueNewAccess,
   socialLogin,
-  artistListFromDB,
 };

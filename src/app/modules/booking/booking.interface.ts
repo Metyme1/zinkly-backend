@@ -1,7 +1,7 @@
 import { Document, Model } from 'mongoose';
 
 export interface IBooking {
-  user: string;
+  users: string[];
   artist: string;
   price: number;
   fine?: number;
