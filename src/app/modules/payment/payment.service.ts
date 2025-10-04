@@ -103,6 +103,151 @@ const createExpressAccount = async (user: JwtPayload) => {
   return accountLink;
 };
 
+const verifyStripeAccountStatus = async (userId: string) => {
+  const user = await User.findById(userId);
+  if (!user || !user.accountInformation?.stripeAccountId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Stripe account not found');
+  }
+
+  const account = await stripe.accounts.retrieve(
+    user.accountInformation.stripeAccountId
+  );
+
+  // Check if the account is active
+  const isActive = account.charges_enabled && account.payouts_enabled;
+
+  await User.findByIdAndUpdate(userId, {
+    $set: {
+      'accountInformation.status': isActive,
+      'accountInformation.detailsSubmitted': account.details_submitted,
+      'accountInformation.chargesEnabled': account.charges_enabled,
+      'accountInformation.payoutsEnabled': account.payouts_enabled,
+    },
+  });
+
+  return {
+    isActive,
+    account,
+  };
+};
+// ---------------- CREATE CONNECTED ACCOUNT ----------------
+const createAccountToStripe = async (payload: any) => {
+  const { user } = payload;
+
+  // user check
+  const isExistUser: any = await User.findById(user.id);
+  if (!isExistUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Artist doesn't exist!");
+  }
+
+  // already has account?
+  if (await User.isAccountCreated(user.id)) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Your account already exists, please skip this step'
+    );
+  }
+
+  // ✅ Create Express account
+  const account = await stripe.accounts.create({
+    type: 'express',
+    country: 'US', // or detect dynamically
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+    },
+  });
+
+  // ✅ Create onboarding link
+  const accountLink = await stripe.accountLinks.create({
+    account: account.id,
+    refresh_url: 'http://192.168.43.238:5000/reauth',
+    return_url: 'http://192.168.43.238:5000/return',
+    type: 'account_onboarding',
+  });
+
+  // Save Stripe account ID to user
+  await User.findByIdAndUpdate(
+    isExistUser._id,
+    {
+      $set: {
+        'accountInformation.stripeAccountId': account.id,
+        'accountInformation.status': false,
+        'accountInformation.accountUrl': accountLink.url,
+      },
+    },
+    { new: true }
+  );
+
+  return accountLink;
+};
+
+//
+
+export const PaymentService = {
+  createPaymentIntentToStripe,
+  createAccountToStripe,
+  createExpressAccount,
+  verifyStripeAccountStatus,
+};
+
+// ---------------- TRANSFER AND PAYOUT ----------------
+// const transferAndPayoutToArtist = async (id: string) => {
+//   const isExistBooking: any = await Booking.findById(id);
+//   if (!isExistBooking) {
+//     throw new ApiError(StatusCodes.BAD_REQUEST, "Booking doesn't exist!");
+//   }
+
+//   const artist = isExistBooking.artist as unknown as string;
+//   const isExistArtist = await User.isAccountCreated(artist);
+//   if (!isExistArtist) {
+//     throw new ApiError(
+//       StatusCodes.BAD_REQUEST,
+//       'You have not provided bank info. Please create a bank account'
+//     );
+//   }
+
+//   if (isExistBooking.status === 'Complete') {
+//     throw new ApiError(
+//       StatusCodes.BAD_REQUEST,
+//       'Payment already transferred to your account.'
+//     );
+//   }
+
+//   const { stripeAccountId, externalAccountId } =
+//     isExistArtist.accountInformation;
+//   const { price } = isExistBooking;
+
+//   const charge = (parseInt(price.toString()) * 10) / 100;
+//   const amount = parseInt(price.toString()) - charge;
+
+//   const transfer = await stripe.transfers.create({
+//     amount: amount * 100,
+//     currency: 'usd',
+//     destination: stripeAccountId,
+//   });
+
+//   const payouts = await stripe.payouts.create(
+//     {
+//       amount: amount * 100,
+//       currency: 'usd',
+//       destination: externalAccountId,
+//     },
+//     {
+//       stripeAccount: stripeAccountId,
+//     }
+//   );
+
+//   if (transfer.id && payouts.id) {
+//     await Booking.findByIdAndUpdate(
+//       { _id: id },
+//       { status: 'Complete' },
+//       { new: true }
+//     );
+//   }
+
+//   return;
+// };
 // // ---------------- CREATE CONNECTED ACCOUNT ----------------
 // const createAccountToStripe = async (payload: any) => {
 //   const { user, bodyData, files } = payload;
@@ -255,122 +400,4 @@ const createExpressAccount = async (user: JwtPayload) => {
 //   }
 
 //   return accountLink;
-// };
-
-const createAccountToStripe = async (payload: any) => {
-  const { user } = payload;
-
-  // user check
-  const isExistUser: any = await User.findById(user.id);
-  if (!isExistUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Artist doesn't exist!");
-  }
-
-  // already has account?
-  if (await User.isAccountCreated(user.id)) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Your account already exists, please skip this step'
-    );
-  }
-
-  // ✅ Create Express account
-  const account = await stripe.accounts.create({
-    type: 'express',
-    country: 'US', // or detect dynamically
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-  });
-
-  // ✅ Create onboarding link
-  const accountLink = await stripe.accountLinks.create({
-    account: account.id,
-    refresh_url: 'http://192.168.43.238:5000/reauth',
-    return_url: 'http://192.168.43.238:5000/return',
-    type: 'account_onboarding',
-  });
-
-  // Save Stripe account ID to user
-  await User.findByIdAndUpdate(
-    isExistUser._id,
-    {
-      $set: {
-        'accountInformation.stripeAccountId': account.id,
-        'accountInformation.status': false,
-        'accountInformation.accountUrl': accountLink.url,
-      },
-    },
-    { new: true }
-  );
-
-  return accountLink;
-};
-
-//
-
-export const PaymentService = {
-  createPaymentIntentToStripe,
-  createAccountToStripe,
-  createExpressAccount,
-  // transferAndPayoutToArtist,
-};
-
-// ---------------- TRANSFER AND PAYOUT ----------------
-// const transferAndPayoutToArtist = async (id: string) => {
-//   const isExistBooking: any = await Booking.findById(id);
-//   if (!isExistBooking) {
-//     throw new ApiError(StatusCodes.BAD_REQUEST, "Booking doesn't exist!");
-//   }
-
-//   const artist = isExistBooking.artist as unknown as string;
-//   const isExistArtist = await User.isAccountCreated(artist);
-//   if (!isExistArtist) {
-//     throw new ApiError(
-//       StatusCodes.BAD_REQUEST,
-//       'You have not provided bank info. Please create a bank account'
-//     );
-//   }
-
-//   if (isExistBooking.status === 'Complete') {
-//     throw new ApiError(
-//       StatusCodes.BAD_REQUEST,
-//       'Payment already transferred to your account.'
-//     );
-//   }
-
-//   const { stripeAccountId, externalAccountId } =
-//     isExistArtist.accountInformation;
-//   const { price } = isExistBooking;
-
-//   const charge = (parseInt(price.toString()) * 10) / 100;
-//   const amount = parseInt(price.toString()) - charge;
-
-//   const transfer = await stripe.transfers.create({
-//     amount: amount * 100,
-//     currency: 'usd',
-//     destination: stripeAccountId,
-//   });
-
-//   const payouts = await stripe.payouts.create(
-//     {
-//       amount: amount * 100,
-//       currency: 'usd',
-//       destination: externalAccountId,
-//     },
-//     {
-//       stripeAccount: stripeAccountId,
-//     }
-//   );
-
-//   if (transfer.id && payouts.id) {
-//     await Booking.findByIdAndUpdate(
-//       { _id: id },
-//       { status: 'Complete' },
-//       { new: true }
-//     );
-//   }
-
-//   return;
 // };

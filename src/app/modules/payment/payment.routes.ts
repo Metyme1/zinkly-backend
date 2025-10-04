@@ -17,6 +17,12 @@ router.post(
   fileUploadHandler(),
   PaymentController.createAccountToStripe
 );
+router.get(
+  '/verify-account-status',
+  auth(USER_ROLES.ARTIST), // protect route if needed
+  PaymentController.verifyAccountStatus
+);
+
 // router.post(
 //   "/webhook",
 //   express.raw({ type: "application/json" }),
