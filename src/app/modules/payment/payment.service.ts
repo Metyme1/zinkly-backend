@@ -92,11 +92,10 @@ const createExpressAccount = async (user: JwtPayload) => {
     $set: { 'accountInformation.stripeAccountId': account.id },
   });
 
-  // Generate an onboarding link
   const accountLink = await stripe.accountLinks.create({
     account: account.id,
-    refresh_url: 'http://localhost:3000/reauth', // 🔹 change to your frontend
-    return_url: 'http://localhost:3000/return', // 🔹 change to your frontend
+    refresh_url: 'http://168.231.65.180:5000/reauth',
+    return_url: 'http://168.231.65.180:5000/return',
     type: 'account_onboarding',
   });
 
