@@ -9,13 +9,16 @@ import cron from 'node-cron';
 import { Notification } from '../notification/notification.model';
 import mongoose from 'mongoose';
 import { emailHelper } from '../../../helpers/emailHelper';
-import Stripe from 'stripe';
-import config from '../../../config';
+
 import { sendNotifications } from '../../../helpers/notificationsHelper';
 import { Availability } from '../avaliablity/avaliablity.model';
-import stripe from 'stripe';
+import { Stripe } from 'stripe';
+import config from '../../../config';
 
 //create stripe instance
+const stripe = new Stripe(config.stripe_api_secret as string, {
+  apiVersion: '2024-06-20', // always set API version
+});
 
 const createBooking = async (payload: IBooking): Promise<IBooking> => {
   // Check if slot is available before booking

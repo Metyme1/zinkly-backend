@@ -12,10 +12,19 @@ const category_controller_1 = require("./category.controller");
 const category_validation_1 = require("./category.validation");
 const fileUploadHandler_1 = __importDefault(require("../../middlewares/fileUploadHandler"));
 const router = express_1.default.Router();
-router.post('/create-category', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN), (0, fileUploadHandler_1.default)(), (0, validateRequest_1.default)(category_validation_1.CategoryValidation.createCategoryZodSchema), category_controller_1.CategoryController.createCategory);
+router.post('/create-category', (0, fileUploadHandler_1.default)(), 
+//auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN), fileUploadHandler(),
+(0, validateRequest_1.default)(category_validation_1.CategoryValidation.createCategoryZodSchema), category_controller_1.CategoryController.createCategory);
 router
     .route('/:id')
     .patch((0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN), (0, fileUploadHandler_1.default)(), category_controller_1.CategoryController.updateCategory)
     .delete((0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN), category_controller_1.CategoryController.deleteCategory);
-router.get('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.USER, user_1.USER_ROLES.ARTIST), category_controller_1.CategoryController.getCategories);
+router.get('/', 
+// auth(
+//   USER_ROLES.SUPER_ADMIN,
+//   USER_ROLES.ADMIN,
+//   USER_ROLES.USER,
+//   USER_ROLES.ARTIST
+// ),
+category_controller_1.CategoryController.getCategories);
 exports.CategoryRoutes = router;

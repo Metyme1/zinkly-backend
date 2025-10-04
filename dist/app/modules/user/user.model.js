@@ -34,7 +34,7 @@ const userSchema = new mongoose_1.Schema({
     },
     contact: {
         type: String,
-        default: ""
+        default: '',
     },
     password: {
         type: String,
@@ -43,11 +43,11 @@ const userSchema = new mongoose_1.Schema({
     },
     location: {
         type: String,
-        default: ""
+        default: '',
     },
     gender: {
         type: String,
-        default: ""
+        default: '',
     },
     profile: {
         type: String,
@@ -64,8 +64,8 @@ const userSchema = new mongoose_1.Schema({
     },
     lesson: {
         type: mongoose_1.Schema.Types.ObjectId,
-        ref: "Lesson",
-        required: false
+        ref: 'Lesson',
+        required: false,
     },
     authentication: {
         type: {
@@ -100,7 +100,7 @@ const userSchema = new mongoose_1.Schema({
         },
         currency: {
             type: String,
-        }
+        },
     },
 }, { timestamps: true });
 //exist user check

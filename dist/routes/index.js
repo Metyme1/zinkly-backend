@@ -16,6 +16,7 @@ const booking_routes_1 = require("../app/modules/booking/booking.routes");
 const notification_routes_1 = require("../app/modules/notification/notification.routes");
 const payment_routes_1 = require("../app/modules/payment/payment.routes");
 const admin_routes_1 = require("../app/modules/admin/admin.routes");
+const avaliablity_route_1 = require("../app/modules/avaliablity/avaliablity.route");
 const router = express_1.default.Router();
 const apiRoutes = [
     { path: '/user', route: user_route_1.UserRoutes },
@@ -30,6 +31,7 @@ const apiRoutes = [
     { path: '/notification', route: notification_routes_1.NotificationRoutes },
     { path: '/payment', route: payment_routes_1.PaymentRoutes },
     { path: '/admin', route: admin_routes_1.AdminRoutes },
+    { path: '/ava', route: avaliablity_route_1.AvailabilityRoutes },
 ];
 apiRoutes.forEach(route => router.use(route.path, route.route));
 exports.default = router;

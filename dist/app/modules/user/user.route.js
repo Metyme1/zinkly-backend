@@ -16,6 +16,10 @@ router.get('/profile', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1
 router
     .route('/')
     .post((0, validateRequest_1.default)(user_validation_1.UserValidation.createUserZodSchema), user_controller_1.UserController.createUser)
-    .delete((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER, user_1.USER_ROLES.ARTIST), user_controller_1.UserController.deleteUser)
+    .delete(
+// auth(USER_ROLES.ADMIN,
+//   USER_ROLES.SUPER_ADMIN,
+//   USER_ROLES.USER, USER_ROLES.ARTIST),
+user_controller_1.UserController.deleteUser)
     .patch((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER, user_1.USER_ROLES.ARTIST), (0, fileUploadHandler_1.default)(), user_controller_1.UserController.updateProfile);
 exports.UserRoutes = router;

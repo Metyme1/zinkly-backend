@@ -12,6 +12,6 @@ const lesson_controller_1 = require("./lesson.controller");
 const lesson_validation_1 = require("./lesson.validation");
 const fileUploadHandler_1 = __importDefault(require("../../middlewares/fileUploadHandler"));
 const router = express_1.default.Router();
-router.post("/create", (0, auth_1.default)(user_1.USER_ROLES.ARTIST), (0, fileUploadHandler_1.default)(), (0, validateRequest_1.default)(lesson_validation_1.LessonValidation.createLessonZodSchema), lesson_controller_1.LessonController.createLesson);
-router.patch("/update-lesson", (0, auth_1.default)(user_1.USER_ROLES.ARTIST), (0, fileUploadHandler_1.default)(), lesson_controller_1.LessonController.updateLesson);
+router.post('/create', (0, auth_1.default)(user_1.USER_ROLES.ARTIST), (0, fileUploadHandler_1.default)(), (0, validateRequest_1.default)(lesson_validation_1.LessonValidation.createLessonZodSchema), lesson_controller_1.LessonController.createLesson);
+router.patch('/update-lesson', (0, auth_1.default)(user_1.USER_ROLES.ARTIST), (0, fileUploadHandler_1.default)(), lesson_controller_1.LessonController.updateLesson);
 exports.LessonRoutes = router;
