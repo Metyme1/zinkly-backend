@@ -17,11 +17,13 @@ router.post(
   fileUploadHandler(),
   PaymentController.createAccountToStripe
 );
-router.get(
-  '/verify-account-status',
-  auth(USER_ROLES.ARTIST), // protect route if needed
-  PaymentController.verifyAccountStatus
+router.patch(
+  '/transfer-payouts/:id',
+  auth(USER_ROLES.USER),
+  PaymentController.transferAndPayoutToArtist
 );
+
+export const PaymentRoutes = router;
 
 // router.post(
 //   "/webhook",
@@ -30,5 +32,3 @@ router.get(
 // );
 
 // router.patch("/transfer-payouts/:id", auth(USER_ROLES.USER), PaymentController.transferAndPayoutToArtist);
-
-export const PaymentRoutes = router;
