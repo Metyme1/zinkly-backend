@@ -94,8 +94,8 @@ const createExpressAccount = async (user: JwtPayload) => {
 
   const accountLink = await stripe.accountLinks.create({
     account: account.id,
-    refresh_url: 'http://168.231.65.180:5000/reauth',
-    return_url: 'http://168.231.65.180:5000/return',
+    refresh_url: 'https://168.231.65.180:5000/reauth',
+    return_url: 'https://168.231.65.180:5000/return',
     type: 'account_onboarding',
   });
 
@@ -160,8 +160,8 @@ const createAccountToStripe = async (payload: any) => {
   // ✅ Create onboarding link
   const accountLink = await stripe.accountLinks.create({
     account: account.id,
-    refresh_url: 'http://192.168.43.238:5000/reauth',
-    return_url: 'http://192.168.43.238:5000/return',
+    refresh_url: 'https://192.168.43.238:5000/reauth',
+    return_url: 'https://192.168.43.238:5000/return',
     type: 'account_onboarding',
   });
 
