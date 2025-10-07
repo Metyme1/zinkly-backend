@@ -22,11 +22,11 @@ router.patch(
   auth(USER_ROLES.USER),
   PaymentController.transferAndPayoutToArtist
 );
-// router.post(
-//   "/webhook",
-//   express.raw({ type: "application/json" }),
-//   PaymentController.stripeWebhook
-// );
+router.post(
+  '/webhook',
+  express.raw({ type: 'application/json' }),
+  PaymentController.stripeWebhookHandler
+);
 export const PaymentRoutes = router;
 
 // router.patch("/transfer-payouts/:id", auth(USER_ROLES.USER), PaymentController.transferAndPayoutToArtist);

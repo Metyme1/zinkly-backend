@@ -176,6 +176,6 @@ export const PaymentController = {
   createPaymentIntentToStripe,
   createAccountToStripe,
   verifyAccountStatus,
-
+  stripeWebhookHandler,
   transferAndPayoutToArtist,
 };
