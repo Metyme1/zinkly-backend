@@ -65,6 +65,8 @@ import catchAsync from '../../../shared/catchAsync';
 import { PaymentService } from './payment.service';
 import sendResponse from '../../../shared/sendResponse';
 import { StatusCodes } from 'http-status-codes';
+import Stripe from 'stripe';
+import config from '../../../config/index';
 
 const createPaymentIntentToStripe = catchAsync(
   async (req: Request, res: Response) => {
@@ -122,6 +124,53 @@ const transferAndPayoutToArtist = catchAsync(
     });
   }
 );
+const stripe = new Stripe(config.stripe_api_secret as string, {
+  apiVersion: '2024-06-20',
+});
+
+const stripeWebhookHandler = catchAsync(async (req: Request, res: Response) => {
+  const sig = req.headers['stripe-signature'];
+
+  let event: Stripe.Event;
+
+  try {
+    // Use raw body because Stripe signs the payload
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig as string,
+      config.stripe_webhook_secret as string
+    );
+  } catch (err: any) {
+    console.error(`⚠️ Webhook signature verification failed: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // ✅ Handle Stripe events
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object as Stripe.Checkout.Session;
+      await PaymentService.handleCheckoutCompleted(session);
+      break;
+    }
+
+    case 'account.updated': {
+      const account = event.data.object as Stripe.Account;
+      await PaymentService.handleAccountUpdated(account);
+      break;
+    }
+
+    case 'payout.paid': {
+      const payout = event.data.object as Stripe.Payout;
+      await PaymentService.handlePayoutPaid(payout);
+      break;
+    }
+
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+
+  res.status(200).json({ received: true });
+});
 
 export const PaymentController = {
   createPaymentIntentToStripe,

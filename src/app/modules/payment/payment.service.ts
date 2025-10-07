@@ -529,10 +529,61 @@ const transferAndPayoutToArtist = async (id: string) => {
   return;
 };
 
+const handleCheckoutCompleted = async (session: Stripe.Checkout.Session) => {
+  try {
+    const customerEmail = session.customer_email;
+    const amount = session.amount_total ? session.amount_total / 100 : 0;
+    console.log(
+      `✅ Payment successful for ${customerEmail}, Amount: $${amount}`
+    );
+
+    // Optional: Update booking/payment status in DB
+    // await Booking.findOneAndUpdate({ txid: session.id }, { status: 'Paid' });
+  } catch (error) {
+    console.error('Error handling checkout.session.completed', error);
+  }
+};
+
+// Handle account updates (e.g. user completes onboarding)
+const handleAccountUpdated = async (account: Stripe.Account) => {
+  try {
+    console.log(`✅ Account updated: ${account.id}`);
+    const user = await User.findOne({
+      'accountInformation.stripeAccountId': account.id,
+    });
+
+    if (user) {
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          'accountInformation.detailsSubmitted': account.details_submitted,
+          'accountInformation.chargesEnabled': account.charges_enabled,
+          'accountInformation.payoutsEnabled': account.payouts_enabled,
+          'accountInformation.status':
+            account.charges_enabled && account.payouts_enabled,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error handling account.updated', error);
+  }
+};
+
+// Handle payout completion
+const handlePayoutPaid = async (payout: Stripe.Payout) => {
+  console.log(
+    `✅ Payout completed: ${payout.id} - Amount: ${payout.amount / 100} ${
+      payout.currency
+    }`
+  );
+};
+
 export const PaymentService = {
   createPaymentIntentToStripe,
   createAccountToStripe,
   createExpressAccount,
   verifyStripeAccountStatus,
   transferAndPayoutToArtist,
+  handleCheckoutCompleted,
+  handleAccountUpdated,
+  handlePayoutPaid,
 };
