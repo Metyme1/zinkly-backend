@@ -83,6 +83,7 @@ const createPaymentIntentToStripe = catchAsync(
     });
   }
 );
+
 const createAccountToStripe = catchAsync(
   async (req: Request, res: Response) => {
     const user = req.user;

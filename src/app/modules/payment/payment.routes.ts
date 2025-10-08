@@ -8,13 +8,13 @@ const router = express.Router();
 router.post(
   '/create-payment-intent',
   auth(USER_ROLES.USER),
-  fileUploadHandler(),
+  //fileUploadHandler(),
   PaymentController.createPaymentIntentToStripe
 );
 router.post(
   '/create-account',
   auth(USER_ROLES.ARTIST),
-  fileUploadHandler(),
+  //fileUploadHandler(),
   PaymentController.createAccountToStripe
 );
 router.patch(

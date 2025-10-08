@@ -417,57 +417,57 @@ const verifyStripeAccountStatus = async (userId: string) => {
     account,
   };
 };
-// ---------------- CREATE CONNECTED ACCOUNT ----------------
-const createAccountToStripe = async (payload: any) => {
-  const { user } = payload;
+// // ---------------- CREATE CONNECTED ACCOUNT ----------------
+// const createAccountToStripe = async (payload: any) => {
+//   const { user } = payload;
 
-  // user check
-  const isExistUser: any = await User.findById(user.id);
-  if (!isExistUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Artist doesn't exist!");
-  }
+//   // user check
+//   const isExistUser: any = await User.findById(user.id);
+//   if (!isExistUser) {
+//     throw new ApiError(StatusCodes.BAD_REQUEST, "Artist doesn't exist!");
+//   }
 
-  // already has account?
-  if (await User.isAccountCreated(user.id)) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Your account already exists, please skip this step'
-    );
-  }
+//   // already has account?
+//   if (await User.isAccountCreated(user.id)) {
+//     throw new ApiError(
+//       StatusCodes.BAD_REQUEST,
+//       'Your account already exists, please skip this step'
+//     );
+//   }
 
-  // ✅ Create Express account
-  const account = await stripe.accounts.create({
-    type: 'express',
-    country: 'US', // or detect dynamically
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-  });
+//   // ✅ Create Express account
+//   const account = await stripe.accounts.create({
+//     type: 'express',
+//     country: 'US', // or detect dynamically
+//     capabilities: {
+//       card_payments: { requested: true },
+//       transfers: { requested: true },
+//     },
+//   });
 
-  // ✅ Create onboarding link
-  const accountLink = await stripe.accountLinks.create({
-    account: account.id,
-    refresh_url: 'https://192.168.43.238:5000/reauth',
-    return_url: 'https://192.168.43.238:5000/return',
-    type: 'account_onboarding',
-  });
+//   // ✅ Create onboarding link
+//   const accountLink = await stripe.accountLinks.create({
+//     account: account.id,
+//     refresh_url: 'https://192.168.43.238:5000/reauth',
+//     return_url: 'https://192.168.43.238:5000/return',
+//     type: 'account_onboarding',
+//   });
 
-  // Save Stripe account ID to user
-  await User.findByIdAndUpdate(
-    isExistUser._id,
-    {
-      $set: {
-        'accountInformation.stripeAccountId': account.id,
-        'accountInformation.status': false,
-        'accountInformation.accountUrl': accountLink.url,
-      },
-    },
-    { new: true }
-  );
+//   // Save Stripe account ID to user
+//   await User.findByIdAndUpdate(
+//     isExistUser._id,
+//     {
+//       $set: {
+//         'accountInformation.stripeAccountId': account.id,
+//         'accountInformation.status': false,
+//         'accountInformation.accountUrl': accountLink.url,
+//       },
+//     },
+//     { new: true }
+//   );
 
-  return accountLink;
-};
+//   return accountLink;
+// };
 
 // transfer and payout credit
 const transferAndPayoutToArtist = async (id: string) => {
@@ -579,7 +579,7 @@ const handlePayoutPaid = async (payout: Stripe.Payout) => {
 
 export const PaymentService = {
   createPaymentIntentToStripe,
-  createAccountToStripe,
+  // createAccountToStripe,
   createExpressAccount,
   verifyStripeAccountStatus,
   transferAndPayoutToArtist,
