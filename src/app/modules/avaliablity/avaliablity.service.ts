@@ -1,19 +1,34 @@
 import { Availability } from './avaliablity.model';
 
+const normalizeDate = (date: string) => {
+  return new Date(date).toISOString().split('T')[0];
+};
+
 const setAvailability = async (
   artistId: string,
   date: string,
-  slots: any[]
+  slots: any[],
 ) => {
+  const normalizedDate = normalizeDate(date);
+
   return await Availability.findOneAndUpdate(
-    { artist: artistId, date },
-    { artist: artistId, date, slots },
-    { new: true, upsert: true }
+    { artist: artistId, date: normalizedDate },
+    {
+      artist: artistId,
+      date: normalizedDate,
+      slots,
+    },
+    { new: true, upsert: true },
   );
 };
 
 const getAvailability = async (artistId: string, date: string) => {
-  return await Availability.findOne({ artist: artistId, date });
+  const normalizedDate = normalizeDate(date);
+
+  return await Availability.findOne({
+    artist: artistId,
+    date: normalizedDate,
+  });
 };
 
 export const AvailabilityService = {
