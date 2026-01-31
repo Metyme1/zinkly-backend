@@ -1,7 +1,7 @@
 import { Availability } from './avaliablity.model';
 
 const normalizeDate = (date: string) => {
-  return new Date(date).toISOString().split('T')[0];
+  return new Date(date.split('T')[0]);
 };
 
 const setAvailability = async (
@@ -12,7 +12,10 @@ const setAvailability = async (
   const normalizedDate = normalizeDate(date);
 
   return await Availability.findOneAndUpdate(
-    { artist: artistId, date: normalizedDate },
+    {
+      artist: artistId,
+      date: normalizedDate,
+    },
     {
       artist: artistId,
       date: normalizedDate,

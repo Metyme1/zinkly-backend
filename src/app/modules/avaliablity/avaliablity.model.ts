@@ -9,10 +9,13 @@ const slotSchema = new Schema({
 const availabilitySchema = new Schema(
   {
     artist: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    date: { type: String, required: true }, // store in YYYY-MM-DD
+    date: {
+      type: Date,
+      required: true,
+    },
     slots: [slotSchema],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Availability = model('Availability', availabilitySchema);
