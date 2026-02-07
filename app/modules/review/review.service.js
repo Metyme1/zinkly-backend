@@ -1,0 +1,59 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ReviewService = void 0;
+const http_status_codes_1 = require("http-status-codes");
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const review_model_1 = require("./review.model");
+const lesson_model_1 = require("../lesson/lesson.model");
+const mongoose_1 = __importDefault(require("mongoose"));
+const createReview = async (payload) => {
+    // convert string to object id;
+    const id = new mongoose_1.default.Types.ObjectId(payload.artist);
+    // check the artist is exist or not;
+    const isExistArtist = await lesson_model_1.Lesson.findOne({ user: id });
+    if (!isExistArtist) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, "No Artist Found");
+    }
+    // checking the rating is valid or not;
+    const rating = Number(payload.rating);
+    if (rating < 1 || rating > 5) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid rating value");
+    }
+    // creating review;
+    const review = await review_model_1.Review.create(payload);
+    if (!review) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "Failed to create review");
+    }
+    // Update artist's rating and total ratings count
+    const totalRating = isExistArtist.totalRating + 1;
+    let newRating;
+    if (isExistArtist.rating === null || isExistArtist.rating === 0) {
+        newRating = rating;
+    }
+    else {
+        newRating = ((isExistArtist.rating * isExistArtist.totalRating) + rating) / totalRating;
+    }
+    const updatedData = {
+        totalRating: totalRating,
+        rating: Number(newRating).toFixed(2) // Round to 2 decimal places
+    };
+    const result = await lesson_model_1.Lesson.findOneAndUpdate({ user: payload.artist }, updatedData, { new: true });
+    if (!result) {
+        console.log("error");
+    }
+    return result;
+};
+const getReview = async (id) => {
+    const result = await review_model_1.Review.find({ artist: id }).populate({ path: "user", select: "name profile" }).select("user rating text");
+    if (!result) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.EXPECTATION_FAILED, "Failed to create review");
+    }
+    return result;
+};
+exports.ReviewService = {
+    createReview,
+    getReview
+};
