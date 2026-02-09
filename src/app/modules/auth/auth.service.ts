@@ -55,14 +55,14 @@ const loginUserFromDB = async (payload: ILoginData) => {
   const createToken = jwtHelper.createToken(
     { id: isExistUser._id, role: isExistUser.role, email: isExistUser.email },
     config.jwt.jwt_secret as Secret,
-    config.jwt.jwt_expire_in as string
+    86400
   );
 
   //Create refresh token
   const refreshToken = jwtHelper.createToken(
     { id: isExistUser._id, role: isExistUser.role, email: isExistUser.email },
     config.jwt.refresh_secret as Secret,
-    config.jwt.refresh_expires_in as string
+    31536000
   );
 
   return { token: createToken, role: isExistUser?.role, refreshToken };
@@ -338,7 +338,7 @@ const issueNewAccessToken = async (token: string) => {
       email: existingUser.email,
     },
     config.jwt.jwt_secret as Secret,
-    config.jwt.jwt_expire_in as string
+    86400
   );
 
   return accessToken;
@@ -346,47 +346,56 @@ const issueNewAccessToken = async (token: string) => {
 
 // social authentication
 const socialLoginFromDB = async (payload: any) => {
-  const { appId, role } = payload;
+  const { appId, role, email } = payload;
 
   const isExistUser = await User.findOne({ appId });
 
   if (isExistUser) {
     //create token
     const accessToken = jwtHelper.createToken(
-      { id: isExistUser._id, role: isExistUser.role },
+      { id: isExistUser._id, role: isExistUser.role, email: isExistUser.email },
       config.jwt.jwt_secret as Secret,
-      config.jwt.jwt_expire_in as string
+      86400
     );
 
     //create token
     const refreshToken = jwtHelper.createToken(
-      { id: isExistUser._id, role: isExistUser.role },
+      { id: isExistUser._id, role: isExistUser.role, email: isExistUser.email },
       config.jwt.jwt_secret as Secret,
-      config.jwt.jwt_expire_in as string
+      31536000
     );
 
-    return { token: accessToken, role, refreshToken };
+    return { token: accessToken, role: isExistUser.role, refreshToken };
   } else {
-    const user = await User.create({ appId, role, verified: true });
+    // Workaround for unique index on email. Generate a placeholder if email is null.
+    const userEmail = email ? email : `${appId}@apple-placeholder.com`;
+
+    const user = await User.create({
+      appId,
+      role,
+      email: userEmail,
+      verified: true,
+      name: role.toLowerCase() + Math.floor(1000 + Math.random() * 9000),
+    });
     if (!user) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to created User');
     }
 
     //create token
     const accessToken = jwtHelper.createToken(
-      { id: user._id, role: user.role },
+      { id: user._id, role: user.role, email: user.email },
       config.jwt.jwt_secret as Secret,
-      config.jwt.jwt_expire_in as string
+      86400
     );
 
     //create token
     const refreshToken = jwtHelper.createToken(
-      { id: user._id, role: user.role },
+      { id: user._id, role: user.role, email: user.email },
       config.jwt.jwt_secret as Secret,
-      config.jwt.jwt_expire_in as string
+      31536000
     );
 
-    return { token: accessToken, role, refreshToken };
+    return { token: accessToken, role: user.role, refreshToken };
   }
 };
 

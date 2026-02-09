@@ -295,6 +295,8 @@ import { User } from '../user/user.model';
 import unlinkFile from '../../../shared/unlinkFile';
 import { JwtPayload } from 'jsonwebtoken';
 const fs = require('fs');
+import { errorLogger, logger } from '../../../shared/logger';
+import colors from 'colors';
 
 // Stripe instance
 const stripe = new Stripe(config.stripe_api_secret as string);
@@ -303,47 +305,41 @@ const stripe = new Stripe(config.stripe_api_secret as string);
 
 // ---------------- CREATE PAYMENT INTENT ----------------
 const createPaymentIntentToStripe = async (user: JwtPayload, payload: any) => {
-  const { price, musicianStripeAccountId } = payload;
+  const { price, musicianId } = payload;
 
   if (typeof price !== 'number' || price <= 0) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid price amount');
   }
-  if (!musicianStripeAccountId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Musician account ID required');
+  if (!musicianId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Musician ID is required');
   }
+
+  // Find the musician to get their Stripe Account ID
+  const musician = await User.findById(musicianId);
+  if (!musician || !musician.accountInformation?.stripeAccountId) {
+    throw new ApiError(
+      StatusCodes.NOT_FOUND,
+      'Musician has no Stripe account configured'
+    );
+  }
+  const destinationStripeId = musician.accountInformation.stripeAccountId;
 
   const amount = Math.trunc(price * 100);
 
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    mode: 'payment',
-    line_items: [
-      {
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: 'Music Lesson',
-          },
-          unit_amount: amount,
-        },
-        quantity: 1,
-      },
-    ],
-    customer_email: user?.email,
-    payment_intent_data: {
-      application_fee_amount: Math.round(amount * 0.1), // 10% fee for platform
-      transfer_data: {
-        destination: musicianStripeAccountId,
-      },
+  // Create a PaymentIntent
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: amount,
+    currency: 'usd',
+    application_fee_amount: Math.round(amount * 0.1), // 10% fee
+    transfer_data: {
+      destination: destinationStripeId,
     },
-    success_url: 'http://192.168.43.238:5000/success',
-    cancel_url: 'http://192.168.43.238:5000/cancel',
   });
 
-  if (!session) {
+  if (!paymentIntent.client_secret) {
     throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Failed to create Payment Checkout'
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to create Payment Intent'
     );
   }
 
@@ -355,39 +351,63 @@ const createPaymentIntentToStripe = async (user: JwtPayload, payload: any) => {
     date.getMonth() +
     date.getFullYear();
 
-  return { txid, url: session?.url };
+  return {
+    clientSecret: paymentIntent.client_secret,
+    stripeAccountId: destinationStripeId,
+    txid: txid,
+  };
 };
 
-// ---------------- CREATE EXPRESS ACCOUNT ----------------
-const createExpressAccount = async (user: JwtPayload) => {
-  // Ensure user exists in DB
-  const dbUser: any = await User.findById(user.id);
-  if (!dbUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+// ---------------- CREATE CONNECTED ACCOUNT ----------------
+const createAccountToStripe = async (user: JwtPayload) => {
+  // user check
+  const isExistUser: any = await User.findById(user.id);
+  if (!isExistUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Artist doesn't exist!");
   }
 
-  // Create a new Stripe Express account
+  // already has account?
+  if (await User.isAccountCreated(user.id)) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Your account already exists, please skip this step'
+    );
+  }
+
+  // ✅ Create Express account
   const account = await stripe.accounts.create({
     type: 'express',
-    country: 'US', // or dynamic, e.g., dbUser.country
+    country: 'US', // or detect dynamically
     capabilities: {
+      card_payments: { requested: true },
       transfers: { requested: true },
     },
   });
 
-  // Save accountId in DB
-  await User.findByIdAndUpdate(dbUser._id, {
-    $set: { 'accountInformation.stripeAccountId': account.id },
-  });
-
+  // ✅ Create onboarding link
   const accountLink = await stripe.accountLinks.create({
     account: account.id,
-    refresh_url: 'https://168.231.65.180:5000/reauth',
-    return_url: 'https://168.231.65.180:5000/return',
+    refresh_url: 'https://192.168.43.238:5000/reauth',
+    return_url: 'https://192.168.43.238:5000/return',
     type: 'account_onboarding',
   });
 
-  return accountLink;
+  // Save Stripe account ID to user
+  await User.findByIdAndUpdate(
+    isExistUser._id,
+    {
+      $set: {
+        'accountInformation.stripeAccountId': account.id,
+        'accountInformation.status': false,
+        'accountInformation.accountUrl': accountLink.url,
+      },
+    },
+    { new: true }
+  );
+
+  const verification = await verifyStripeAccountStatus(isExistUser._id);
+
+  return { accountLink, verification };
 };
 
 const verifyStripeAccountStatus = async (userId: string) => {
@@ -417,57 +437,6 @@ const verifyStripeAccountStatus = async (userId: string) => {
     account,
   };
 };
-// // ---------------- CREATE CONNECTED ACCOUNT ----------------
-// const createAccountToStripe = async (payload: any) => {
-//   const { user } = payload;
-
-//   // user check
-//   const isExistUser: any = await User.findById(user.id);
-//   if (!isExistUser) {
-//     throw new ApiError(StatusCodes.BAD_REQUEST, "Artist doesn't exist!");
-//   }
-
-//   // already has account?
-//   if (await User.isAccountCreated(user.id)) {
-//     throw new ApiError(
-//       StatusCodes.BAD_REQUEST,
-//       'Your account already exists, please skip this step'
-//     );
-//   }
-
-//   // ✅ Create Express account
-//   const account = await stripe.accounts.create({
-//     type: 'express',
-//     country: 'US', // or detect dynamically
-//     capabilities: {
-//       card_payments: { requested: true },
-//       transfers: { requested: true },
-//     },
-//   });
-
-//   // ✅ Create onboarding link
-//   const accountLink = await stripe.accountLinks.create({
-//     account: account.id,
-//     refresh_url: 'https://192.168.43.238:5000/reauth',
-//     return_url: 'https://192.168.43.238:5000/return',
-//     type: 'account_onboarding',
-//   });
-
-//   // Save Stripe account ID to user
-//   await User.findByIdAndUpdate(
-//     isExistUser._id,
-//     {
-//       $set: {
-//         'accountInformation.stripeAccountId': account.id,
-//         'accountInformation.status': false,
-//         'accountInformation.accountUrl': accountLink.url,
-//       },
-//     },
-//     { new: true }
-//   );
-
-//   return accountLink;
-// };
 
 // transfer and payout credit
 const transferAndPayoutToArtist = async (id: string) => {
@@ -571,19 +540,36 @@ const handleAccountUpdated = async (account: Stripe.Account) => {
 // Handle payout completion
 const handlePayoutPaid = async (payout: Stripe.Payout) => {
   console.log(
-    `✅ Payout completed: ${payout.id} - Amount: ${payout.amount / 100} ${
-      payout.currency
+    `✅ Payout completed: ${payout.id} - Amount: ${payout.amount / 100} ${payout.currency
     }`
   );
 };
 
+// This is a temporary function to manually link a Stripe account
+const forceLinkStripeAccount = async () => {
+  const userId = '6982a7e1b936b12e4e16e89f';
+  const stripeAccountId = 'acct_1Sww5kBzA3KesbnO';
+
+  await User.findByIdAndUpdate(userId, {
+    $set: {
+      'accountInformation.stripeAccountId': stripeAccountId,
+      'accountInformation.status': true,
+      'accountInformation.detailsSubmitted': true,
+      'accountInformation.chargesEnabled': true,
+      'accountInformation.payoutsEnabled': true,
+    },
+  });
+
+  return { message: `Successfully linked user ${userId} to Stripe account ${stripeAccountId}` };
+};
+
 export const PaymentService = {
   createPaymentIntentToStripe,
-  // createAccountToStripe,
-  createExpressAccount,
+  createAccountToStripe,
   verifyStripeAccountStatus,
   transferAndPayoutToArtist,
   handleCheckoutCompleted,
   handleAccountUpdated,
   handlePayoutPaid,
+  forceLinkStripeAccount, // Temporarily export the new function
 };

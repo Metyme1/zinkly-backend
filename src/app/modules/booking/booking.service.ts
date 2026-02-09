@@ -62,16 +62,16 @@ const createBooking = async (payload: IBooking): Promise<IBooking> => {
 };
 
 const myBookingFromDB = async (
-  payload: JwtPayload,
+  id: string,
   queries: string
 ): Promise<IBooking[]> => {
   const query: any = {
-    user: payload,
+    users: { $in: [id] },
   };
 
   if (queries === 'Complete') {
     query.status = queries;
-  } else {
+  } else if (queries === 'pending') {
     query.status = 'Pending';
   }
 

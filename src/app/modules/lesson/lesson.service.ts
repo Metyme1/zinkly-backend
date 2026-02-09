@@ -70,4 +70,59 @@ const updateLesson = async (payload: any, user: any): Promise<ILesson | null> =>
 };
 
 
-export const LessonService = { createLesson, updateLesson } 
+
+const moveLesson = async (lessonId: string, newUserId: string): Promise<ILesson | null> => {
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+        throw new ApiError(StatusCodes.NOT_FOUND, "Lesson not found");
+    }
+
+    const newUser = await User.findById(newUserId);
+    if (!newUser) {
+        throw new ApiError(StatusCodes.NOT_FOUND, "New user not found");
+    }
+
+    const oldUserId = lesson.user;
+
+    // Update lesson owner
+    lesson.user = newUserId as any;
+    await lesson.save();
+
+    // Update old user's lesson field
+    await User.findByIdAndUpdate(oldUserId, { $unset: { lesson: 1 } });
+
+    // Update new user's lesson field
+    await User.findByIdAndUpdate(newUserId, { $set: { lesson: lessonId } });
+
+    return lesson;
+}
+
+const createLessonByAdmin = async (payload: ILesson): Promise<ILesson> => {
+    const user = await User.findById(payload.user);
+    if (!user) {
+        throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+    }
+
+    const result:any = await Lesson.create(payload);
+    if(!result){
+        throw new ApiError(StatusCodes.UNAUTHORIZED, "Failed to create Lesson");
+    }
+
+    if(result?._id){
+        await User.findByIdAndUpdate({_id: result?.user}, {$set: {lesson: result?._id}});
+    }
+
+    return result;
+}
+
+const updateLessonByAdmin = async (id: string, payload: any): Promise<ILesson | null> => {
+    const lesson = await Lesson.findById(id);
+    if (!lesson) {
+        throw new ApiError(StatusCodes.NOT_FOUND, "Lesson not found");
+    }
+
+    const result = await Lesson.findByIdAndUpdate({_id: id}, payload, { new: true });
+    return result;
+}
+
+export const LessonService = { createLesson, updateLesson, moveLesson, createLessonByAdmin, updateLessonByAdmin } 

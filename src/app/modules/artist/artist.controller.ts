@@ -106,9 +106,9 @@ const artistListFromDB = catchAsync(async (req: Request, res: Response) => {
   const results = await Lesson.find(whereConditions)
     .populate({
       path: 'user',
-      select: 'name profile',
+      select: 'name profile email contact',
     })
-    .select('rating totalRating gallery title');
+    .select('rating totalRating gallery title price lessonTitle');
 
   const availableArtist = results.map((item: { toObject: () => any }) => {
     const artist = item.toObject();

@@ -4,6 +4,7 @@ import { UserRoutes } from '../app/modules/user/user.route';
 import { RuleRoutes } from '../app/modules/rule/rule.route';
 import { CategoryRoutes } from '../app/modules/category/category.route';
 import { LessonRoutes } from '../app/modules/lesson/lesson.routes';
+import { LessonAdminRoutes } from '../app/modules/lesson/lesson.admin.routes';
 import { ReviewRoutes } from '../app/modules/review/review.routes';
 import { BookmarkRoutes } from '../app/modules/bookmark/bookmark.routes';
 import { ArtistRoutes } from '../app/modules/artist/artist.routes';
@@ -20,6 +21,7 @@ const apiRoutes = [
   { path: '/rule', route: RuleRoutes },
   { path: '/category', route: CategoryRoutes },
   { path: '/lesson', route: LessonRoutes },
+  { path: '/lesson-admin', route: LessonAdminRoutes },
   { path: '/review', route: ReviewRoutes },
   { path: '/bookmark', route: BookmarkRoutes },
   { path: '/artist', route: ArtistRoutes },

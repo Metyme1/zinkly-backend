@@ -17,7 +17,6 @@ const userSchema = new Schema<IUser, UserModal>(
     },
     email: {
       type: String,
-      unique: true,
       lowercase: true,
     },
     contact: {
@@ -95,6 +94,12 @@ const userSchema = new Schema<IUser, UserModal>(
   { timestamps: true }
 );
 
+// Add a unique index with a partial filter to allow multiple null emails
+userSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: 'string' } } }
+);
+
 //exist user check
 userSchema.statics.isExistUserById = async (id: string) => {
   const isExist = await User.findById(id);
@@ -122,15 +127,6 @@ userSchema.statics.isMatchPassword = async (
 
 //check user
 userSchema.pre('save', async function (next) {
-  //check user
-
-  if (this.email) {
-    const isExist = await User.findOne({ email: this.email });
-    if (isExist) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Email already exist!');
-    }
-  }
-
   //password hash
   if (this.password) {
     this.password = await bcrypt.hash(

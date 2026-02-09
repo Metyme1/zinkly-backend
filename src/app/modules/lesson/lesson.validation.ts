@@ -4,7 +4,7 @@ const createLessonZodSchema = z.object({
   body: z.object({
     title: z.string({ required_error: 'Title is required' }),
     notes: z.string({ required_error: 'Notes is required' }),
-    price: z.string({ required_error: 'Price is required' }),
+    price: z.number({ required_error: 'Price is required' }),
     lessonOutline: z.string({ required_error: 'Lesson Outline is required' }),
     duration: z.string({ required_error: 'Duration is required' }),
     lessonTitle: z.string({ required_error: 'Lesson Title is required' }),
@@ -30,7 +30,15 @@ const updateLessonZodSchema = z.object({
   }),
 })
 
+
+const moveLessonZodSchema = z.object({
+  body: z.object({
+    userId: z.string({ required_error: 'userId is required' }),
+  }),
+});
+
 export const LessonValidation = {
   createLessonZodSchema,
   updateLessonZodSchema,
+  moveLessonZodSchema,
 }

@@ -10,7 +10,6 @@ const router = express.Router();
 router.post(
   '/create',
   auth(USER_ROLES.ARTIST),
-  fileUploadHandler(),
   validateRequest(LessonValidation.createLessonZodSchema),
   LessonController.createLesson
 );

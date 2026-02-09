@@ -33,14 +33,12 @@ const createSuperAdminToDB = async (payload: any): Promise<IUser> => {
   return createAdmin;
 };
 
-const usersFromDB = async (payload: any): Promise<IUser[]> => {
+const usersFromDB = async (
+  payload: any
+): Promise<{ data: IUser[]; meta: { page: number; total: number } }> => {
   const { search, page, limit } = payload;
 
-  const anyConditions = [];
-
-  anyConditions.push({
-    role: 'USER',
-  });
+  const anyConditions: any = [{ role: 'USER' }];
 
   //artist search here
   if (search) {
@@ -57,18 +55,18 @@ const usersFromDB = async (payload: any): Promise<IUser[]> => {
   const whereConditions =
     anyConditions.length > 0 ? { $and: anyConditions } : {};
 
-  const pages = parseInt(page) || 1;
-  const size = parseInt(limit) || 10;
-  const skip = (pages - 1) * size;
+  const pages: number = parseInt(page) || 1;
+  const size: number = parseInt(limit) || 10;
+  const skip: number = (pages - 1) * size;
 
-  const result: any = await User.find(whereConditions)
+  const result: IUser[] = await User.find(whereConditions)
     .select('name email contact location gender profile')
     .skip(skip)
     .limit(size);
 
   const count = await User.countDocuments(whereConditions);
 
-  const data: any = {
+  const data = {
     data: result,
     meta: {
       page: pages,
@@ -79,14 +77,12 @@ const usersFromDB = async (payload: any): Promise<IUser[]> => {
   return data;
 };
 
-const artistFromDB = async (payload: any): Promise<IUser[]> => {
+const artistFromDB = async (
+  payload: any
+): Promise<{ data: IUser[]; meta: { page: number; total: number } }> => {
   const { search, page, limit } = payload;
 
-  const anyConditions = [];
-
-  anyConditions.push({
-    role: 'ARTIST',
-  });
+  const anyConditions: any = [{ role: 'ARTIST' }];
 
   //artist search here
   if (search) {
@@ -103,11 +99,11 @@ const artistFromDB = async (payload: any): Promise<IUser[]> => {
   const whereConditions =
     anyConditions.length > 0 ? { $and: anyConditions } : {};
 
-  const pages = parseInt(page) || 1;
-  const size = parseInt(limit) || 10;
-  const skip = (pages - 1) * size;
+  const pages: number = parseInt(page) || 1;
+  const size: number = parseInt(limit) || 10;
+  const skip: number = (pages - 1) * size;
 
-  const result: any = await User.find(whereConditions)
+  const result: IUser[] = await User.find(whereConditions)
     .populate({ path: 'lesson', select: 'genre bio' })
     .select('name email contact location gender profile lesson')
     .skip(skip)
@@ -115,7 +111,7 @@ const artistFromDB = async (payload: any): Promise<IUser[]> => {
 
   const count = await User.countDocuments(whereConditions);
 
-  const data: any = {
+  const data = {
     data: result,
     meta: {
       page: pages,

@@ -108,4 +108,12 @@ export const AuthController = {
   changePassword,
   issueNewAccess,
   socialLogin,
+  testAccess: catchAsync(async (req: Request, res: Response) => {
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: 'Access test successful!',
+      data: null,
+    });
+  }),
 };

@@ -27,6 +27,16 @@ router.post(
   express.raw({ type: 'application/json' }),
   PaymentController.stripeWebhookHandler
 );
+
+router.get(
+  '/verify-account',
+  auth(USER_ROLES.ARTIST),
+  PaymentController.verifyAccountStatus
+);
+
+// Temporary route for force-linking
+router.get('/force-link', PaymentController.forceLink);
+
 export const PaymentRoutes = router;
 
 // router.patch("/transfer-payouts/:id", auth(USER_ROLES.USER), PaymentController.transferAndPayoutToArtist);

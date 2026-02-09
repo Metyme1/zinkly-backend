@@ -75,6 +75,7 @@ const createPaymentIntentToStripe = catchAsync(
       req.user,
       payload
     );
+
     sendResponse(res, {
       statusCode: StatusCodes.OK,
       success: true,
@@ -88,15 +89,17 @@ const createAccountToStripe = catchAsync(
   async (req: Request, res: Response) => {
     const user = req.user;
 
-    // ✅ Call the Express account creation service (no bodyData/files needed)
-    const result = await PaymentService.createExpressAccount(user);
+    // ✅ Call the updated account creation service
+    const { accountLink, verification } =
+      await PaymentService.createAccountToStripe(user);
 
     sendResponse(res, {
       statusCode: StatusCodes.OK,
       success: true,
       message: 'Express account onboarding link created successfully',
       data: {
-        url: result.url, // ✅ return actual Stripe onboarding link
+        url: accountLink.url, // ✅ return actual Stripe onboarding link
+        verification,
       },
     });
   }
@@ -173,10 +176,22 @@ const stripeWebhookHandler = catchAsync(async (req: Request, res: Response) => {
   res.status(200).json({ received: true });
 });
 
+// Temporary controller function for force-linking
+const forceLink = catchAsync(async (req: Request, res: Response) => {
+  const result = await PaymentService.forceLinkStripeAccount();
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Account force-linked successfully!',
+    data: result,
+  });
+});
+
 export const PaymentController = {
   createPaymentIntentToStripe,
   createAccountToStripe,
   verifyAccountStatus,
   stripeWebhookHandler,
   transferAndPayoutToArtist,
+  forceLink, // Temporarily export the new function
 };

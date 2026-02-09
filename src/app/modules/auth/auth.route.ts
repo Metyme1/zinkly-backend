@@ -41,4 +41,6 @@ router.post('/social-login', AuthController.socialLogin);
 
 router.post('/refresh-token', AuthController.issueNewAccess);
 
+router.get('/test-access', AuthController.testAccess);
+
 export const AuthRoutes = router;
