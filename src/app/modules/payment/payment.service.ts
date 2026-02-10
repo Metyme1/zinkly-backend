@@ -367,12 +367,12 @@ const createAccountToStripe = async (user: JwtPayload) => {
   }
 
   // already has account?
-  if (await User.isAccountCreated(user.id)) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Your account already exists, please skip this step'
-    );
-  }
+  // if (await User.isAccountCreated(user.id)) {
+  //   throw new ApiError(
+  //     StatusCodes.BAD_REQUEST,
+  //     'Your account already exists, please skip this step'
+  //   );
+  // }
 
   // ✅ Create Express account
   const account = await stripe.accounts.create({
